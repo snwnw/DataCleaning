@@ -1,0 +1,141 @@
+SELECT *
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+-- Standardize data format
+
+select SaleDate, CONVERT(date, SaleDate)
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+  Update [Nashvile Housing]
+  SET SaleDate = CONVERT(date, SaleDate) 
+
+  Alter table [Nashvile Housing]
+  Add SaleDateConverted Date 
+
+    Update [Nashvile Housing]
+  SET SaleDateConverted = CONVERT(date, SaleDate) 
+
+  select SaleDateConverted, CONVERT(date, SaleDate)
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+  ---Populate Property Address data 
+  
+  select a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, ISNULL(a.PropertyAddress, b.PropertyAddress)
+  FROM [PortfolioProject].[dbo].[Nashvile Housing] as a 
+   JOIN [PortfolioProject].[dbo].[Nashvile Housing] as b 
+   on a.ParcelID = b.ParcelID
+   and a.[UniqueID ] <> b.[UniqueID ]
+   Where a.PropertyAddress is null
+
+
+   Update a
+   SET PropertyAddress = ISNULL(a.PropertyAddress, b.PropertyAddress)
+     FROM [PortfolioProject].[dbo].[Nashvile Housing] as a 
+   JOIN [PortfolioProject].[dbo].[Nashvile Housing] as b 
+   on a.ParcelID = b.ParcelID
+   and a.[UniqueID ] <> b.[UniqueID ]
+      Where a.PropertyAddress is null
+
+-- Breaking out Address Into Individual Columns ( Address, City, State) 
+
+SELECT PropertyAddress
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+
+Select SUBSTRING( PropertyAddress, 1, CHARINDEX(',', PropertyAddress)-1) as adress, 
+ SUBSTRING( PropertyAddress, CHARINDEX(',', PropertyAddress)+1,LEN(PropertyAddress)) as adress
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+  
+  Alter table [Nashvile Housing]
+  Add PropertySplitAddress Nvarchar(255)	 
+
+    Update [Nashvile Housing]
+  SET PropertySplitAddress = SUBSTRING( PropertyAddress, 1, CHARINDEX(',', PropertyAddress)-1)
+
+    Alter table [Nashvile Housing]
+  Add PropertySplitCity Nvarchar(255)	 
+
+    Update [Nashvile Housing]
+  SET PropertySplitCity =  SUBSTRING( PropertyAddress, CHARINDEX(',', PropertyAddress)+1,LEN(PropertyAddress))
+
+  Select * 
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+  -- or we can do another way with replace function
+    Select  
+	Parsename(REPLACE(OwnerAddress, ',', '.') , 3),
+		Parsename(REPLACE(OwnerAddress, ',', '.') , 2),
+			Parsename(REPLACE(OwnerAddress, ',', '.') , 1)
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+  
+
+    
+  Alter table [Nashvile Housing]
+  Add OwnerSplitAddress Nvarchar(255)	 
+
+      Update [Nashvile Housing]
+  SET OwnerSplitAddress = 	Parsename(REPLACE(OwnerAddress, ',', '.') , 3)
+
+    Alter table [Nashvile Housing]
+  Add OwnerSplitCity Nvarchar(255)	 
+
+      Update [Nashvile Housing]
+  SET OwnerSplitCity = Parsename(REPLACE(OwnerAddress, ',', '.') , 2)
+
+     Alter table [Nashvile Housing]
+  Add OwnerSplitState Nvarchar(255)	 
+
+      Update [Nashvile Housing]
+  SET OwnerSplitState = Parsename(REPLACE(OwnerAddress, ',', '.') , 1)
+
+		Select * 
+	  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+-- Change Y to Yes  and N to No in "Sold as Vacant" field
+	Select Distinct (SoldAsVacant), COUNT(SoldAsVacant)
+	  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+	  Group by SoldAsVacant
+	  order by 2
+
+
+	  	Select SoldAsVacant,
+		Case When SoldAsVacant = 'Y' THEN 'Yes'
+		When SoldAsVacant = 'N' THEN 'No'
+		Else SoldAsVacant
+		END
+	  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+	  Update [PortfolioProject].[dbo].[Nashvile Housing]
+	  SET SoldAsVacant = Case When SoldAsVacant = 'Y' THEN 'Yes'
+		When SoldAsVacant = 'N' THEN 'No'
+		Else SoldAsVacant
+		END
+
+
+
+--Remove duplicates 
+WITH RowNumCTE AS (
+Select *,
+	ROW_NUMBER() Over(
+	Partition By ParcelID,	
+				 PropertyAddress,
+				 SalePrice,
+				 SaleDate,
+				 LegalReference
+				 Order by UniqueID 
+				 ) as row_num
+  FROM [PortfolioProject].[dbo].[Nashvile Housing]
+  )
+  --DELETE
+Select *
+  From RowNumCTE
+  Where row_num > 1 
+
+  -- Delete unused columns
+  Select *
+    FROM [PortfolioProject].[dbo].[Nashvile Housing]
+
+	ALter Table [PortfolioProject].[dbo].[Nashvile Housing]
+	Drop column OwnerAddress, TaxDistrict, PropertyAddress, 
+	ALter Table [PortfolioProject].[dbo].[Nashvile Housing]
+	Drop column SaleDate
